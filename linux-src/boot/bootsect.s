@@ -1,3 +1,6 @@
+# 启动扇区的代码 bootsection
+# BIOS 将该段代码拷贝到 0x7c00 处执行，占一个扇区
+# 该段代码将自身移动到 0x90000 处，然后跳转到 0x90000 处
 !
 ! SYS_SIZE is the number of clicks (16 bytes) to be loaded.
 ! 0x3000 is 0x30000 bytes = 196kB, more than enough for current
@@ -11,7 +14,7 @@ SYSSIZE = 0x3000
 ! iself out of the way to address 0x90000, and jumps there.
 !
 ! It then loads 'setup' directly after itself (0x90200), and the system
-! at 0x10000, using BIOS interrupts. 
+! at 0x10000, using BIOS interrupts.
 !
 ! NOTE! currently system is at most 8*65536 bytes long. This should be no
 ! problem, even in the future. I want to keep it simple. This 512 kB
@@ -43,17 +46,29 @@ ENDSEG   = SYSSEG + SYSSIZE		! where to stop loading
 ROOT_DEV = 0x306
 
 entry start
+# 将自身拷贝到 0x90000 处，并跳转到 0x90000 处执行
 start:
+	# 拷贝 bootsect 到 INITSEG
+	# 设置 ds
 	mov	ax,#BOOTSEG
 	mov	ds,ax
+
+	# 设置 es
 	mov	ax,#INITSEG
 	mov	es,ax
+
+	# 执行拷贝
 	mov	cx,#256
 	sub	si,si
 	sub	di,di
 	rep
 	movw
+
+	# 跳转到 INITSEG
 	jmpi	go,INITSEG
+
+
+
 go:	mov	ax,cs
 	mov	ds,ax
 	mov	es,ax
@@ -94,7 +109,7 @@ ok_load_setup:
 	mov	ah,#0x03		! read cursor pos
 	xor	bh,bh
 	int	0x10
-	
+
 	mov	cx,#24
 	mov	bx,#0x0007		! page 0, attribute 7 (normal)
 	mov	bp,#msg1
@@ -136,6 +151,7 @@ root_defined:
 ! the setup-routine loaded directly after
 ! the bootblock:
 
+# boot 结束，跳转到 setup
 	jmpi	0,SETUPSEG
 
 ! This routine loads the system at address 0x10000, making sure
