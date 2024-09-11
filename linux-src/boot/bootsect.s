@@ -46,7 +46,7 @@ ENDSEG   = SYSSEG + SYSSIZE		! where to stop loading
 ROOT_DEV = 0x306
 
 entry start
-# 将自身拷贝到 0x90000 处，并跳转到 0x90000 处执行
+# 1. 将自身拷贝到 0x90000 处，并跳转到 0x90000 处执行
 start:
 	# 拷贝 bootsect 到 INITSEG
 	# 设置 ds
@@ -64,7 +64,7 @@ start:
 	rep
 	movw
 
-	# 跳转到 INITSEG
+	# 2. 跳转到 INITSEG
 	jmpi	go,INITSEG
 
 
@@ -72,6 +72,7 @@ start:
 go:	mov	ax,cs
 	mov	ds,ax
 	mov	es,ax
+## 设置栈顶指针
 ! put stack at 0x9ff00.
 	mov	ss,ax
 	mov	sp,#0xFF00		! arbitrary value >>512
@@ -79,6 +80,7 @@ go:	mov	ax,cs
 ! load the setup-sectors directly after the bootblock.
 ! Note that 'es' is already set up.
 
+## 3. 执行 0x13 中断，将2~5扇区的 setup.s 程序拷贝至 SETUPSEG
 load_setup:
 	mov	dx,#0x0000		! drive 0, head 0
 	mov	cx,#0x0002		! sector 2, track 0
@@ -93,6 +95,7 @@ load_setup:
 
 ok_load_setup:
 
+## 4. 执行 0x13 中断，将 0x10000 处的系统内核拷贝至 SYSSEG
 ! Get disk drive parameters, specifically nr of sectors/track
 
 	mov	dl,#0x00
@@ -151,7 +154,7 @@ root_defined:
 ! the setup-routine loaded directly after
 ! the bootblock:
 
-# boot 结束，跳转到 setup
+# 5. boot 结束，跳转到 setup
 	jmpi	0,SETUPSEG
 
 ! This routine loads the system at address 0x10000, making sure

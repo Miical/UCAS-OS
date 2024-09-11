@@ -1,6 +1,13 @@
+# 从BIOS中获取系统数据，然后把它们放到系统内存中合适的位置
+# 覆盖掉原来初始bootsect的位置
+# 0x90000 2字节 光标位置
+# 0x90002 2字节 扩展内存数（KB） 系统从1MB开始的扩展内存数 IBM兼容机，内存最大为1M
+# 0x90004 2字节 显示页
+# ...
 !
 !	setup.s		(C) 1991 Linus Torvalds
 !
+！ 这两个设置。S和系统已被引导块加载。
 ! setup.s is responsible for getting the system data from the BIOS,
 ! and putting them into the appropriate places in system memory.
 ! both setup.s and system has been loaded by the bootblock.
@@ -30,6 +37,7 @@ begbss:
 entry start
 start:
 
+# 1. 加载系统数据
 ! ok, the read went well so we get current cursor position and save it for
 ! posterity.
 
@@ -105,10 +113,21 @@ no_disk1:
 is_disk1:
 
 ! now we want to move to protected mode ...
+# 以上都是 16 位的实模式
 
+# (需要进入保护模式)
+# 1) 32位地址
+# 2) 有特权级
+# 3) 有虚拟地址
+# 4) 中断
+
+# 2. 关闭中断 （直到 main 函数跑了很久才开启）
+# 要把中断机制变为保护模式下的中断机制
+# 在更换的过程中，中断不允许发生
 	cli			! no interrupts allowed !
 
 ! first we move the system to it's rightful place
+# 3. 移动内核到最开始 0x00000
 
 	mov	ax,#0x0000
 	cld			! 'direction'=0, movs moves forward
@@ -127,12 +146,22 @@ do_move:
 
 ! then we load the segment descriptors
 
+# IDTR 中断描述符表寄存器，存储中断描述符表的地址和长度 (0x00000)
+# GDTR 全局描述符表寄存器 （用于描述段），存储全局描述符表的地址和长度 (0x90200+）
+	# 全局描述符表中存储段描述符
+	# 段基址+段限长+特权级
+
+# 4. 设置中断描述符表和全局描述符表寄存器
 end_move:
 	mov	ax,#SETUPSEG	! right, forgot this at first. didn't work :-)
 	mov	ds,ax
+	# 设置 IDTR
 	lidt	idt_48		! load idt with 0,0
+	# 设置 GDTR
 	lgdt	gdt_48		! load gdt with whatever appropriate
 
+
+# 5. 打开 A20，打开地址总线20位以上
 ! that was painless, now we enable A20
 
 	call	empty_8042
@@ -143,6 +172,7 @@ end_move:
 	out	#0x60,al
 	call	empty_8042
 
+# 6. 重新设置中断
 ! well, that went ok, I hope. Now we have to reprogram the interrupts :-(
 ! we put them right after the intel-reserved hardware interrupts, at
 ! int 0x20-0x2F. There they won't mess up anything. Sadly IBM really
@@ -188,8 +218,11 @@ end_move:
 ! we let the gnu-compiled 32-bit programs do that. We just jump to
 ! absolute address 0x00000, in 32-bit protected mode.
 
+# 7. 进入保护模式
+# 设置 CR0 寄存器的 PE 位
 	mov	ax,#0x0001	! protected mode (PE) bit
 	lmsw	ax		! This is it!
+
 	jmpi	0,8		! jmp offset 0 of segment 8 (cs)
 
 ! This routine checks that the keyboard command queue is empty
@@ -205,11 +238,13 @@ empty_8042:
 gdt:
 	.word	0,0,0,0		! dummy
 
+	# 内核代码段
 	.word	0x07FF		! 8Mb - limit=2047 (2048*4096=8Mb)
 	.word	0x0000		! base address=0
 	.word	0x9A00		! code read/exec
 	.word	0x00C0		! granularity=4096, 386
 
+	# 内核数据段
 	.word	0x07FF		! 8Mb - limit=2047 (2048*4096=8Mb)
 	.word	0x0000		! base address=0
 	.word	0x9200		! data read/write
@@ -222,7 +257,7 @@ idt_48:
 gdt_48:
 	.word	0x800		! gdt limit=2048, 256 GDT entries
 	.word	512+gdt,0x9	! gdt base = 0X9xxxx
-	
+
 .text
 endtext:
 .data
