@@ -127,7 +127,7 @@ is_disk1:
 	cli			! no interrupts allowed !
 
 ! first we move the system to it's rightful place
-# 3. 移动内核到最开始 0x00000
+# 3. 移动内核到最开始 0x00000，覆盖掉原始的中断向量表
 
 	mov	ax,#0x0000
 	cld			! 'direction'=0, movs moves forward
@@ -151,7 +151,7 @@ do_move:
 	# 全局描述符表中存储段描述符
 	# 段基址+段限长+特权级
 
-# 4. 设置中断描述符表和全局描述符表寄存器
+# 4. 设置中断描述符表寄存器和全局描述符表寄存器
 end_move:
 	mov	ax,#SETUPSEG	! right, forgot this at first. didn't work :-)
 	mov	ds,ax
@@ -173,6 +173,7 @@ end_move:
 	call	empty_8042
 
 # 6. 重新设置中断
+# 设置 A8259 芯片的映射
 ! well, that went ok, I hope. Now we have to reprogram the interrupts :-(
 ! we put them right after the intel-reserved hardware interrupts, at
 ! int 0x20-0x2F. There they won't mess up anything. Sadly IBM really
@@ -223,6 +224,21 @@ end_move:
 	mov	ax,#0x0001	! protected mode (PE) bit
 	lmsw	ax		! This is it!
 
+# 8. 跳转到 0x00000，head.s 程序
+# 跳转到 cs 段的 0 偏移处
+# 0b001000 <-> 8(cs)
+#      |||
+#      |++-- 特权级
+#    GDT/LGT
+# 前三位表示在 对应表(GDT/LGT) 中的偏移
+#
+# GDT:
+# 	0 空
+# 	1 内核代码段
+# 	2 内核数据段
+#
+# GDT项（段描述符）：
+# 段基址、段限长(单位、数量）、特权级
 	jmpi	0,8		! jmp offset 0 of segment 8 (cs)
 
 ! This routine checks that the keyboard command queue is empty

@@ -13,27 +13,47 @@
  */
 .text
 .globl _idt,_gdt,_pg_dir,_tmp_floppy_area
+# 用了两级页表
+# 页目录表-页表-页
+
+# 页目录表
 _pg_dir:
 startup_32:
+	# 1. 将 ds es fs gs 设置为 0x10
+	# 0x10 内核数据段
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
 	mov %ax,%fs
 	mov %ax,%gs
+
+	# 2. 将栈指针设置为 _stack_start
+	# 带 _ 的与C语言有关
+	# stack_start 定义了用户栈(user_stack)的起始地址
 	lss _stack_start,%esp
+
+	# 3. 设置中断描述符表
 	call setup_idt
+
+	# 4. 设置全局描述符表
 	call setup_gdt
+
+	# 5. 重新设置段和用户栈
 	movl $0x10,%eax		# reload all the segment registers
 	mov %ax,%ds		# after changing gdt. CS was already
 	mov %ax,%es		# reloaded in 'setup_gdt'
 	mov %ax,%fs
 	mov %ax,%gs
 	lss _stack_start,%esp
+
+    # 6. 检查 A20 地址线是否启用
 	xorl %eax,%eax
 1:	incl %eax		# check that A20 really IS enabled
 	movl %eax,0x000000	# loop forever if it isn't
 	cmpl %eax,0x100000
 	je 1b
+
+	# 7. 检查数学协处理器
 /*
  * NOTE! 486 should set bit 16, to check for write-protect in supervisor
  * mode. Then it would be unnecessary with the "verify_area()"-calls.
@@ -46,11 +66,14 @@ startup_32:
 	orl $2,%eax		# set MP
 	movl %eax,%cr0
 	call check_x87
+
+	# 8. 运行 after_page_tables
 	jmp after_page_tables
 
 /*
  * We depend on ET to be correct. This checks for 287/387.
  */
+ # 检查是否有 x87 协处理器
 check_x87:
 	fninit
 	fstsw %ax
@@ -64,6 +87,7 @@ check_x87:
 1:	.byte 0xDB,0xE4		/* fsetpm for 287, ignored by 387 */
 	ret
 
+# 3. 设置中断描述符表
 /*
  *  setup_idt
  *
@@ -75,6 +99,13 @@ check_x87:
  *  sure everything is ok. This routine will be over-
  *  written by the page tables.
  */
+# 先占位，后面会填充，把大概的格式写出来
+# 中断描述符格式：
+#  0-8 中断服务程序低16位地址
+#  8-16 中断服务程序段选择子（需要从 GDT 中再取）
+#  16-24 DPL(2 bit)描述符特权级, CPL当前特权级， RPL请求特权级
+#  24-32 中断服务程序高16位地址
+
 setup_idt:
 	lea ignore_int,%edx
 	movl $0x00080000,%eax
@@ -89,8 +120,11 @@ rp_sidt:
 	addl $8,%edi
 	dec %ecx
 	jne rp_sidt
+	# 加载 idt 基址 到 idtr
 	lidt idt_descr
 	ret
+
+
 
 /*
  *  setup_gdt
@@ -102,7 +136,9 @@ rp_sidt:
  *  rather long comment is certainly needed :-).
  *  This routine will beoverwritten by the page tables.
  */
+ # 设置全局描述符表
 setup_gdt:
+	# 加载 gdt 基址 到 gdtr
 	lgdt gdt_descr
 	ret
 
@@ -133,11 +169,14 @@ _tmp_floppy_area:
 	.fill 1024,1,0
 
 after_page_tables:
+	# 9. 将 main 函数压入调用栈
 	pushl $0		# These are the parameters to main :-)
 	pushl $0
 	pushl $0
 	pushl $L6		# return address for main, if it decides to.
 	pushl $_main
+
+	# 10. 跳转到设置页表，设置完之后，跳转到 main 函数
 	jmp setup_paging
 L6:
 	jmp L6			# main should never return here, but
@@ -231,8 +270,15 @@ gdt_descr:
 	.align 3
 _idt:	.fill 256,8,0		# idt is uninitialized
 
+# 段限长改为了 16Mb
 _gdt:	.quad 0x0000000000000000	/* NULL descriptor */
+	# 内核代码段
 	.quad 0x00c09a0000000fff	/* 16Mb */
+	# 内核数据段
 	.quad 0x00c0920000000fff	/* 16Mb */
+	# 隔离段
 	.quad 0x0000000000000000	/* TEMPORARY - don't use */
+
+	# 成对划分给用户的段
+	# 一个用户进程占两个表项
 	.fill 252,8,0			/* space for LDT's and TSS's etc */
