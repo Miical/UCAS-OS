@@ -238,7 +238,7 @@ ignore_int:
 # 两级分页：页目录表-页表
 # 一个页目录表有 1024 个页表项，每个页表项管理 1024 个页，每个页 4K。总共管理 4G 的内存
 setup_paging:
-	# 11. 清零页目录表，和初始使用的 4 个页表
+	# 11. 清零页目录表，和 4 个页表
 	movl $1024*5,%ecx		/* 5 pages - pg_dir+4 page tables */
 	xorl %eax,%eax
 	xorl %edi,%edi			/* pg_dir is at 0x000 */

@@ -235,7 +235,7 @@ void un_wp_page(unsigned long * table_entry)
 	*table_entry = new_page | 7;
 	invalidate();
 	copy_page(old_page,new_page);
-}	
+}
 
 /*
  * This routine handles present pages, when users try to write
@@ -401,8 +401,12 @@ void mem_init(long start_mem, long end_mem)
 	int i;
 
 	HIGH_MEMORY = end_mem;
+	// mem_map 引用计数
+	// 最多 64 进程，USED 为 100
 	for (i=0 ; i<PAGING_PAGES ; i++)
 		mem_map[i] = USED;
+
+	// 后面把某些内存标记为未使用
 	i = MAP_NR(start_mem);
 	end_mem -= start_mem;
 	end_mem >>= 12;
