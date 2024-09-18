@@ -234,26 +234,44 @@ ignore_int:
  * won't guarantee that's all :-( )
  */
 .align 2
+# 设置分页
+# 两级分页：页目录表-页表
+# 一个页目录表有 1024 个页表项，每个页表项管理 1024 个页，每个页 4K。总共管理 4G 的内存
 setup_paging:
+	# 11. 清零页目录表，和初始使用的 4 个页表
 	movl $1024*5,%ecx		/* 5 pages - pg_dir+4 page tables */
 	xorl %eax,%eax
 	xorl %edi,%edi			/* pg_dir is at 0x000 */
 	cld;rep;stosl
+
+	# 12. 设置页目录表中的项
+	# 页表项中每个项中的 20 位是页表的基址，后 12 位是属性
+	# 页表项的属性：  r/w, user/supervisor, present
+	# +7 是设置属性为 111
 	movl $pg0+7,_pg_dir		/* set present bit/user r/w */
 	movl $pg1+7,_pg_dir+4		/*  --------- " " --------- */
 	movl $pg2+7,_pg_dir+8		/*  --------- " " --------- */
 	movl $pg3+7,_pg_dir+12		/*  --------- " " --------- */
+
+	# 13. 设置所有的页表项全部
 	movl $pg3+4092,%edi
 	movl $0xfff007,%eax		/*  16Mb - 4096 + 7 (r/w user,p) */
 	std
 1:	stosl			/* fill pages backwards - more efficient :-) */
 	subl $0x1000,%eax
 	jge 1b
+	# 达到了这样的目的，内核写入的地址和物理地址相同
+
+	# 14. 设置分页相关的系统寄存器
+	# cr3 设置为页目录表的基址。高版本中决定了是哪个进程的页目录表在起作用
 	xorl %eax,%eax		/* pg_dir is at 0x0000 */
 	movl %eax,%cr3		/* cr3 - page directory start */
 	movl %cr0,%eax
+	# 打开分页
 	orl $0x80000000,%eax
 	movl %eax,%cr0		/* set paging (PG) bit */
+
+	# 15. 跳转到 main 函数
 	ret			/* this also flushes prefetch-queue */
 
 .align 2
