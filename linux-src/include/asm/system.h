@@ -19,20 +19,26 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 
 #define iret() __asm__ ("iret"::)
 
+// 设置门描述符，做一个IDT的表项
+// args: 门地址，门类型，特权级别，处理函数地址
+// edx 一开始存放中断处理函数地址 0x____(原来的中断处理函数高地址） %0(权限和类型的描述)
+// eax 0x0008(段选择子) 0000(后来把dx移进去，变成中断处理函数低地址)
 #define _set_gate(gate_addr,type,dpl,addr) \
 __asm__ ("movw %%dx,%%ax\n\t" \
 	"movw %0,%%dx\n\t" \
 	"movl %%eax,%1\n\t" \
 	"movl %%edx,%2" \
 	: \
-	: "i" ((short) (0x8000+(dpl<<13)+(type<<8))), \
-	"o" (*((char *) (gate_addr))), \
-	"o" (*(4+(char *) (gate_addr))), \
-	"d" ((char *) (addr)),"a" (0x00080000))
+	: "i" ((short) (0x8000+(dpl<<13)+(type<<8))), \     // 对应%0, i: 立即数
+	"o" (*((char *) (gate_addr))), \					// 对应%1, o: 内存
+	"o" (*(4+(char *) (gate_addr))), \					// 对应%2, o: 内存
+	"d" ((char *) (addr)),"a" (0x00080000))  			//  d: edx, a: eax
 
 #define set_intr_gate(n,addr) \
 	_set_gate(&idt[n],14,0,addr)
 
+// 设置陷阱门
+// args: 中断号，中断处理函数
 #define set_trap_gate(n,addr) \
 	_set_gate(&idt[n],15,0,addr)
 

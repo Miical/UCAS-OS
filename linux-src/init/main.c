@@ -101,6 +101,14 @@ static long main_memory_start = 0;
 
 struct drive_info { char dummy[32]; } drive_info;
 
+/*
+进程
+调度
+内存
+块设备
+字符设备
+*/
+
 void main(void)		/* This really IS void, no error here. */
 {			/* The startup routine assumes (well, ...) this */
 /*
@@ -131,10 +139,16 @@ void main(void)		/* This really IS void, no error here. */
 	mem_init(main_memory_start,memory_end);
 	// 初始化中断
 	trap_init();
+	// 块设备初始化
 	blk_dev_init();
+
 	chr_dev_init();
+	// 字符设备
 	tty_init();
+	// 时间初始化
 	time_init();
+
+	// 调度
 	sched_init();
 	buffer_init(buffer_memory_end);
 	hd_init();

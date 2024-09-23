@@ -320,7 +320,7 @@ void do_timer(long cpl)
 		next_timer->jiffies--;
 		while (next_timer && next_timer->jiffies <= 0) {
 			void (*fn)(void);
-			
+
 			fn = next_timer->fn;
 			next_timer->fn = NULL;
 			next_timer = next_timer->next;
@@ -389,8 +389,10 @@ void sched_init(void)
 
 	if (sizeof(struct sigaction) != 16)
 		panic("Struct sigaction MUST be 16 bytes");
+
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
+
 	p = gdt+2+FIRST_TSS_ENTRY;
 	for(i=1;i<NR_TASKS;i++) {
 		task[i] = NULL;
@@ -401,8 +403,12 @@ void sched_init(void)
 	}
 /* Clear NT, so that we won't have troubles with that later on */
 	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
+
+	// load tr(tast register)
 	ltr(0);
+	// load ldt
 	lldt(0);
+
 	outb_p(0x36,0x43);		/* binary, mode 3, LSB/MSB, ch 0 */
 	outb_p(LATCH & 0xff , 0x40);	/* LSB */
 	outb(LATCH >> 8 , 0x40);	/* MSB */

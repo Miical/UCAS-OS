@@ -182,6 +182,8 @@ void trap_init(void)
 {
 	int i;
 
+	// 设置中断向量表（IDT）
+	// args: 中断号，中断处理函数
 	set_trap_gate(0,&divide_error);
 	set_trap_gate(1,&debug);
 	set_trap_gate(2,&nmi);
