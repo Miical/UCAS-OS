@@ -99,8 +99,10 @@ struct task_struct {
 	struct m_inode * root;
 	struct m_inode * executable;
 	unsigned long close_on_exec;
+	// 进程打开的文件
 	struct file * filp[NR_OPEN];
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
+	// 三个局部描述符表，每个进程结构相同，保证进程无法访问其他进程的段
 	struct desc_struct ldt[3];
 /* tss for this task */
 	struct tss_struct tss;
@@ -124,6 +126,7 @@ struct task_struct {
 		{0,0}, \
 /* ldt */	{0x9f,0xc0fa00}, \
 		{0x9f,0xc0f200}, \
+		//! 算对应数据 段基址，段限长，特权级
 	}, \
 /*tss*/	{0,PAGE_SIZE+(long)&init_task,0x10,0,0,0,0,(long)&pg_dir,\
 	 0,0,0,0,0,0,0,0, \

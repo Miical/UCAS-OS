@@ -50,6 +50,10 @@ extern void mem_use(void);
 extern int timer_interrupt(void);
 extern int system_call(void);
 
+// 每个进程一个 task_union，进程最核心概念
+// 4k 大小
+// 前1k左右可被解释为 task_struct
+// 后3k左右可被解释为内核栈。这个栈大小被测算好，不会溢出，覆盖到 task_struct
 union task_union {
 	struct task_struct task;
 	char stack[PAGE_SIZE];
@@ -382,17 +386,33 @@ int sys_nice(long increment)
 	return 0;
 }
 
+/* GDT 表项
+ 一个进程占两个表项: TSS LDT
+ TSS0 LDT0 TSS1 LDT1 TSS2 LDT2 ...
+
+ TSS0 保存上下文信息
+ LDT0 | 保存进程的局部描述符表
+	  |
+	  |- 2: 数据段描述符
+	  |- 1: 代码段描述符
+	  +- 0: NULL
+ */
+
 void sched_init(void)
 {
 	int i;
+	// dec_struct: 两个进程相关的描述符表项
 	struct desc_struct * p;
 
 	if (sizeof(struct sigaction) != 16)
 		panic("Struct sigaction MUST be 16 bytes");
 
+	// 设置 tss 描述符
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
+	// 设置 ldt 描述符
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
 
+	// 初始化 GDT 表项
 	p = gdt+2+FIRST_TSS_ENTRY;
 	for(i=1;i<NR_TASKS;i++) {
 		task[i] = NULL;
@@ -405,14 +425,19 @@ void sched_init(void)
 	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
 
 	// load tr(tast register)
+	// 让cpu中的tr寄存器指向当前任务的tss (tss0)
 	ltr(0);
 	// load ldt
+	// 让cpu中的ldtr寄存器指向当前任务的ldt (ldt0)
 	lldt(0);
 
+	//! 内核代码段和进程0的代码段，有什么关系？（他们两个一样）
 	outb_p(0x36,0x43);		/* binary, mode 3, LSB/MSB, ch 0 */
 	outb_p(LATCH & 0xff , 0x40);	/* LSB */
 	outb(LATCH >> 8 , 0x40);	/* MSB */
+	// 中断门
 	set_intr_gate(0x20,&timer_interrupt);
 	outb(inb_p(0x21)&~0x01,0x21);
+	// 系统门
 	set_system_gate(0x80,&system_call);
 }
