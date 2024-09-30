@@ -19,7 +19,7 @@
  */
 
 #include <stdarg.h>
- 
+
 #include <linux/config.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
@@ -164,7 +164,7 @@ static inline void insert_into_queues(struct buffer_head * bh)
 }
 
 static struct buffer_head * find_buffer(int dev, int block)
-{		
+{
 	struct buffer_head * tmp;
 
 	for (tmp = hash(dev,block) ; tmp != NULL ; tmp = tmp->b_next)
@@ -347,6 +347,7 @@ struct buffer_head * breada(int dev,int first, ...)
 
 void buffer_init(long buffer_end)
 {
+	// buffer_head 做成了一个环形链表
 	struct buffer_head * h = start_buffer;
 	void * b;
 	int i;
@@ -376,6 +377,7 @@ void buffer_init(long buffer_end)
 	free_list = start_buffer;
 	free_list->b_prev_free = h;
 	h->b_next_free = free_list;
+
 	for (i=0;i<NR_HASH;i++)
 		hash_table[i]=NULL;
-}	
+}

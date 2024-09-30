@@ -66,6 +66,7 @@ long startup_time=0;
 struct task_struct *current = &(init_task.task);
 struct task_struct *last_task_used_math = NULL;
 
+// 只有真正在运行的进程才在这个数组里
 struct task_struct * task[NR_TASKS] = {&(init_task.task), };
 
 long user_stack [ PAGE_SIZE>>2 ] ;

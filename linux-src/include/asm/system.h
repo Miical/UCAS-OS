@@ -1,11 +1,13 @@
 #define move_to_user_mode() \
 __asm__ ("movl %%esp,%%eax\n\t" \
-	"pushl $0x17\n\t" \
-	"pushl %%eax\n\t" \
-	"pushfl\n\t" \
-	"pushl $0x0f\n\t" \
-	"pushl $1f\n\t" \
-	"iret\n" \
+	// 之前的所用的0特权栈，就是进程0的用户栈
+	// 0x17要和ldtr(0)相关联，进程0
+	"pushl $0x17\n\t" \ // 0x17: 用户数据段选择子 ss
+	"pushl %%eax\n\t" \ // 用户栈指针            esp
+	"pushfl\n\t" \      // eflags              eflags
+	"pushl $0x0f\n\t" \ // 0x0f: 用户代码段选择子 cs
+	"pushl $1f\n\t" \   // 1f: 标号，跳转到这里   eip
+	"iret\n" \		    // 中断返回
 	"1:\tmovl $0x17,%%eax\n\t" \
 	"movw %%ax,%%ds\n\t" \
 	"movw %%ax,%%es\n\t" \

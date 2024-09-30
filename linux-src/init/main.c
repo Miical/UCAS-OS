@@ -150,10 +150,18 @@ void main(void)		/* This really IS void, no error here. */
 
 	// 调度
 	sched_init();
+
+	// 普通文件块设备的buffer初始化
 	buffer_init(buffer_memory_end);
+
+	// 硬盘初始化
 	hd_init();
+	// 软盘初始化
 	floppy_init();
+
+	// 开中断
 	sti();
+
 	move_to_user_mode();
 	if (!fork()) {		/* we count on this going ok */
 		init();
