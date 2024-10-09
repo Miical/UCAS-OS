@@ -77,21 +77,33 @@ reschedule:
 	pushl $ret_from_sys_call
 	jmp _schedule
 .align 2
+
+# 系统调用的入口, int 0x80 会调用这个函数
 _system_call:
+	# nr_system_calls = 72，总的系统调用数
 	cmpl $nr_system_calls-1,%eax
+	# 判断是不是在确定性范围内（不要越界）
 	ja bad_sys_call
+
+	# 往内核栈压入参数
 	push %ds
 	push %es
 	push %fs
 	pushl %edx
 	pushl %ecx		# push %ebx,%ecx,%edx as parameters
 	pushl %ebx		# to the system call
+
+	# 内核数据段 -> ds,es
 	movl $0x10,%edx		# set up ds,es to kernel space
 	mov %dx,%ds
 	mov %dx,%es
+	# 0x17 用户数据段 -> fs
 	movl $0x17,%edx		# fs points to local data space
 	mov %dx,%fs
+
+	# 调用对应的系统调用函数
 	call _sys_call_table(,%eax,4)
+
 	pushl %eax
 	movl _current,%eax
 	cmpl $0,state(%eax)		# state
@@ -204,17 +216,22 @@ _sys_execve:
 	addl $4,%esp
 	ret
 
+# 没有绝对的内核，一定是某个进程的内核态
 .align 2
 _sys_fork:
+	# 找到一个空的进程表项
 	call _find_empty_process
+	# 如果没有找到，直接返回
 	testl %eax,%eax
 	js 1f
+
 	push %gs
 	pushl %esi
 	pushl %edi
 	pushl %ebp
 	pushl %eax
 	call _copy_process
+
 	addl $20,%esp
 1:	ret
 

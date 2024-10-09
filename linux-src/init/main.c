@@ -162,7 +162,9 @@ void main(void)		/* This really IS void, no error here. */
 	// 开中断
 	sti();
 
+	// 往下就变成进程0的代码了，特权级变成了3
 	move_to_user_mode();
+
 	if (!fork()) {		/* we count on this going ok */
 		init();
 	}
