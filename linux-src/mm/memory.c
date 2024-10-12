@@ -155,11 +155,21 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 	unsigned long * from_dir, * to_dir;
 	unsigned long nr;
 
+	// 需要对齐 4M，一个页表（页目录表项）的管理范围
+	// 体系结构提出的要求
 	if ((from&0x3fffff) || (to&0x3fffff))
 		panic("copy_page_tables called with wrong alignment");
+
+	// 内核用到的16M： | 内核页目录表 | 页表 | 页表 | 页表 | 页表 | ...... | 进程1的页表 | 进程1的task |
+	// 只有一个页目录表，进程1 64MB，每个页表管4M，总共需要16个页表。页表在统一的页目录表里被索引
+	// 让同学回去算->进程0的基址位置和内核的基址位置相同
+
+	// 页目录表项的基址
 	from_dir = (unsigned long *) ((from>>20) & 0xffc); /* _pg_dir = 0 */
 	to_dir = (unsigned long *) ((to>>20) & 0xffc);
 	size = ((unsigned) (size+0x3fffff)) >> 22;
+
+	// 拷贝页目录表中对应项
 	for( ; size-->0 ; from_dir++,to_dir++) {
 		if (1 & *to_dir)
 			panic("copy_page_tables: already exist");
@@ -170,6 +180,8 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 			return -1;	/* Out of memory, see freeing */
 		*to_dir = ((unsigned long) to_page_table) | 7;
 		nr = (from==0)?0xA0:1024;
+
+		// 拷贝页表的逐项
 		for ( ; nr-- > 0 ; from_page_table++,to_page_table++) {
 			this_page = *from_page_table;
 			if (!(1 & this_page))

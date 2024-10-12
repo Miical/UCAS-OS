@@ -41,18 +41,20 @@ int copy_mem(int nr,struct task_struct * p)
 	unsigned long old_data_base,new_data_base,data_limit;
 	unsigned long old_code_base,new_code_base,code_limit;
 
-	code_limit=get_limit(0x0f);
-	data_limit=get_limit(0x17);
-	old_code_base = get_base(current->ldt[1]);
-	old_data_base = get_base(current->ldt[2]);
+	code_limit=get_limit(0x0f); // 0x0f用户代码段 获得当前运行进程的限长
+	data_limit=get_limit(0x17); // 0x17用户数据段
+	old_code_base = get_base(current->ldt[1]); // 代码段基址
+	old_data_base = get_base(current->ldt[2]); // 代码段限长
 	if (old_data_base != old_code_base)
 		panic("We don't support separate I&D");
 	if (data_limit < code_limit)
 		panic("Bad data_limit");
-	new_data_base = new_code_base = nr * 0x4000000;
+
+	new_data_base = new_code_base = nr * 0x4000000; // nr * 64M 线性地址
 	p->start_code = new_code_base;
 	set_base(p->ldt[1],new_code_base);
 	set_base(p->ldt[2],new_data_base);
+
 	if (copy_page_tables(old_data_base,new_data_base,data_limit)) {
 		free_page_tables(new_data_base,data_limit);
 		return -ENOMEM;
@@ -93,8 +95,11 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->start_time = jiffies;
 	// tss:进程上下文
 	p->tss.back_link = 0;
+
+	// 标明内核栈
 	p->tss.esp0 = PAGE_SIZE + (long) p;
 	p->tss.ss0 = 0x10;
+
 	p->tss.eip = eip; //
 	p->tss.eflags = eflags;
 	p->tss.eax = 0;
