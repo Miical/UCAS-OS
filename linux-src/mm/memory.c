@@ -183,11 +183,15 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 
 		// 拷贝页表的逐项
 		for ( ; nr-- > 0 ; from_page_table++,to_page_table++) {
+			// 每一项都直接拷贝过来并设置为只读
 			this_page = *from_page_table;
 			if (!(1 & this_page))
 				continue;
 			this_page &= ~2;
+
+
 			*to_page_table = this_page;
+			// 防止内核到内核复制
 			if (this_page > LOW_MEM) {
 				*from_page_table = this_page;
 				this_page -= LOW_MEM;
@@ -196,6 +200,8 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 			}
 		}
 	}
+
+	# fork机制：需要有人把子进程的程序拷贝到内存里。
 	invalidate();
 	return 0;
 }

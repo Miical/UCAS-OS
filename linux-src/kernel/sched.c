@@ -131,6 +131,7 @@ void schedule(void)
 		next = 0;
 		i = NR_TASKS;
 		p = &task[NR_TASKS];
+		// 挑一个时间片最长的，并且就绪的
 		while (--i) {
 			if (!*--p)
 				continue;
@@ -138,6 +139,7 @@ void schedule(void)
 				c = (*p)->counter, next = i;
 		}
 		if (c) break;
+
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)
 				(*p)->counter = ((*p)->counter >> 1) +
