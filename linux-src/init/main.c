@@ -20,7 +20,7 @@
  * won't be any messing with the stack from main(), but we define
  * some others too.
  */
-static inline _syscall0(int,fork)
+static inline _syscall0(int,fork) // ! 为什么inline
 static inline _syscall0(int,pause)
 static inline _syscall1(int,setup,void *,BIOS)
 static inline _syscall0(int,sync)
@@ -166,6 +166,7 @@ void main(void)		/* This really IS void, no error here. */
 	move_to_user_mode();
 
 	if (!fork()) {		/* we count on this going ok */
+		// 进程1开始执行
 		init();
 	}
 /*
@@ -175,6 +176,7 @@ void main(void)		/* This really IS void, no error here. */
  * can run). For task0 'pause()' just means we go check if some other
  * task can run, and if not we return here.
  */
+	// 进程0在这里不停的调度, pause->schedule->switch_to
 	for(;;) pause();
 }
 

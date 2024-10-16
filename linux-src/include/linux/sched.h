@@ -177,7 +177,7 @@ __asm__("cmpl %%ecx,_current\n\t" \
 	"je 1f\n\t" \
 	"movw %%dx,%1\n\t" \
 	"xchgl %%ecx,_current\n\t" \
-	"ljmp %0\n\t" \
+	"ljmp %0\n\t" \ // 动用了任务切换机制，切换了特权级
 	"cmpl %%ecx,_last_task_used_math\n\t" \
 	"jne 1f\n\t" \
 	"clts\n" \
