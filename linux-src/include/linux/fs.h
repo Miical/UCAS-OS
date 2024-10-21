@@ -65,20 +65,24 @@ __asm__("incl %0\n\tandl $4095,%0"::"m" (head))
 
 typedef char buffer_block[BLOCK_SIZE];
 
+// 缓冲区是内核的数据结构，用于加速对块设备的访问
 struct buffer_head {
 	// 指向对应数据块
 	char * b_data;			/* pointer to data block (1024 bytes) */
-	// 设备号（块号）
+	// 块号
 	unsigned long b_blocknr;	/* block number */
 	// 设备号（逻辑盘
 	unsigned short b_dev;		/* device (0 = free) */
+	// 是否已经更新至与磁盘一致
 	unsigned char b_uptodate;
 	// 脏位
 	unsigned char b_dirt;		/* 0-clean,1-dirty */
 	// 引用计数
 	unsigned char b_count;		/* users using this block */
+	// 加锁，防止竞争
 	unsigned char b_lock;		/* 0 - ok, 1 -locked */
-	struct task_struct * b_wait;
+
+	struct task_struct * b_wait; // 需要唤醒的进程 等待数据从磁盘返回
 	struct buffer_head * b_prev;
 	struct buffer_head * b_next;
 	struct buffer_head * b_prev_free;

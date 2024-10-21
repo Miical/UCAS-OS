@@ -163,10 +163,12 @@ static inline void insert_into_queues(struct buffer_head * bh)
 	bh->b_next->b_prev = bh;
 }
 
+// 寻找哈希表中是否有对应的buffer_head
 static struct buffer_head * find_buffer(int dev, int block)
 {
 	struct buffer_head * tmp;
 
+	// 找到哈希表的头，遍历哈希表
 	for (tmp = hash(dev,block) ; tmp != NULL ; tmp = tmp->b_next)
 		if (tmp->b_dev==dev && tmp->b_blocknr==block)
 			return tmp;
@@ -208,23 +210,34 @@ struct buffer_head * getblk(int dev,int block)
 	struct buffer_head * tmp, * bh;
 
 repeat:
+	// (设备号,块号) 对应一个 buffer_head，buffer_head 被建立为了一个环形链表。
+	// buffer_head又被建立起来一个哈希表，可以通过(设备号，块号)快速地找到对应的buffer_head
+
+	// 首先在哈希表中去寻找是否有对应的buffer_head
 	if (bh = get_hash_table(dev,block))
 		return bh;
+
 	tmp = free_list;
 	do {
 		if (tmp->b_count)
 			continue;
+
+		// BADNESS = 脏位 + 锁位，找到一个 BADNESS 最小的 buffer_head
 		if (!bh || BADNESS(tmp)<BADNESS(bh)) {
 			bh = tmp;
+			// 如果既不是脏的，也不能锁住的，那就直接退出了
 			if (!BADNESS(tmp))
 				break;
 		}
 /* and repeat until we find something good */
 	} while ((tmp = tmp->b_next_free) != free_list);
+	// 以上找到了一个最好的 buffer_head，但是这个 buffer_head 可能是脏的，或者被锁住的
+
 	if (!bh) {
 		sleep_on(&buffer_wait);
 		goto repeat;
 	}
+
 	wait_on_buffer(bh);
 	if (bh->b_count)
 		goto repeat;
@@ -272,6 +285,7 @@ struct buffer_head * bread(int dev,int block)
 		panic("bread: getblk returned NULL\n");
 	if (bh->b_uptodate)
 		return bh;
+
 	ll_rw_block(READ,bh);
 	wait_on_buffer(bh);
 	if (bh->b_uptodate)
