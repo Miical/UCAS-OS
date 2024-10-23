@@ -102,7 +102,10 @@ static void make_request(int major,int rw, struct buffer_head * bh)
 	}
 	if (rw!=READ && rw!=WRITE)
 		panic("Bad block dev command, must be R/W/RA/WA");
+
+	// 给bh加锁
 	lock_buffer(bh);
+	// 不需要读，也不需要写
 	if ((rw == WRITE && !bh->b_dirt) || (rw == READ && bh->b_uptodate)) {
 		unlock_buffer(bh);
 		return;
@@ -112,15 +115,21 @@ repeat:
  * we want some room for reads: they take precedence. The last third
  * of the requests are only for reads.
  */
+	// 读比写的迫切性更强
 	if (rw == READ)
 		req = request+NR_REQUEST;
 	else
+		// 写的请求最多占2/3
 		req = request+((NR_REQUEST*2)/3);
+
 /* find an empty request */
+	// 找到一个空的 request
 	while (--req >= request)
 		if (req->dev<0)
 			break;
+
 /* if none found, sleep on new requests: check for rw_ahead */
+	// 如果没有找到，就等待
 	if (req < request) {
 		if (rw_ahead) {
 			unlock_buffer(bh);
@@ -129,7 +138,9 @@ repeat:
 		sleep_on(&wait_for_request);
 		goto repeat;
 	}
+
 /* fill up the request-info, and add it to the queue */
+	// 制作请求信息
 	req->dev = bh->b_dev;
 	req->cmd = rw;
 	req->errors=0;
@@ -146,6 +157,7 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 {
 	unsigned int major;
 
+	// MAJOR获取了blk_dev中的编号
 	if ((major=MAJOR(bh->b_dev)) >= NR_BLK_DEV ||
 	!(blk_dev[major].request_fn)) {
 		printk("Trying to read nonexistent block-device\n\r");

@@ -213,12 +213,15 @@ repeat:
 	// (设备号,块号) 对应一个 buffer_head，buffer_head 被建立为了一个环形链表。
 	// buffer_head又被建立起来一个哈希表，可以通过(设备号，块号)快速地找到对应的buffer_head
 
-	// 首先在哈希表中去寻找是否有对应的buffer_head
+	// 首先在哈希表中去寻找是否有对应的buffer_head，如果有说明以前被缓存过
+	// 找到了直接返回
 	if (bh = get_hash_table(dev,block))
 		return bh;
 
+	// 如果没有就去找一个空闲的 buffer_head
 	tmp = free_list;
 	do {
+		// 需要找 count 为0的
 		if (tmp->b_count)
 			continue;
 
@@ -233,14 +236,17 @@ repeat:
 	} while ((tmp = tmp->b_next_free) != free_list);
 	// 以上找到了一个最好的 buffer_head，但是这个 buffer_head 可能是脏的，或者被锁住的
 
+	// 如果全部的 buffer_head 都被占用了，那就等待
 	if (!bh) {
 		sleep_on(&buffer_wait);
 		goto repeat;
 	}
 
 	wait_on_buffer(bh);
+	// 在sleep_on 和 wait_on_buffer过程中有可能被别人占用，在这里需要判断
 	if (bh->b_count)
 		goto repeat;
+
 	while (bh->b_dirt) {
 		sync_dev(bh->b_dev);
 		wait_on_buffer(bh);
@@ -249,16 +255,20 @@ repeat:
 	}
 /* NOTE!! While we slept waiting for this block, somebody else might */
 /* already have added "this" block to the cache. check it */
+	// 重新检查一遍, 有可能在等待的过程中，别人已经把这个block加入到了缓存中
 	if (find_buffer(dev,block))
 		goto repeat;
 /* OK, FINALLY we know that this buffer is the only one of it's kind, */
 /* and that it's unused (b_count=0), unlocked (b_lock=0), and clean */
+
 	bh->b_count=1;
 	bh->b_dirt=0;
 	bh->b_uptodate=0;
+	// 从原来叉子上拿下来
 	remove_from_queues(bh);
 	bh->b_dev=dev;
 	bh->b_blocknr=block;
+	// 再放到正确的叉子上
 	insert_into_queues(bh);
 	return bh;
 }
@@ -283,9 +293,11 @@ struct buffer_head * bread(int dev,int block)
 
 	if (!(bh=getblk(dev,block)))
 		panic("bread: getblk returned NULL\n");
+	// 回来的时候，有可能里面有特定块数据，也有可能没有
 	if (bh->b_uptodate)
 		return bh;
 
+	// 读取数据，使得update_to_date
 	ll_rw_block(READ,bh);
 	wait_on_buffer(bh);
 	if (bh->b_uptodate)
