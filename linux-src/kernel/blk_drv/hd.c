@@ -250,6 +250,7 @@ static void bad_rw_intr(void)
 		reset = 1;
 }
 
+// 读中断
 static void read_intr(void)
 {
 	if (win_result()) {

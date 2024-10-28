@@ -138,6 +138,7 @@ void schedule(void)
 			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
 				c = (*p)->counter, next = i;
 		}
+		// 如果是-1，表示没有可以运行的进程了，此时next=0
 		if (c) break;
 
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)

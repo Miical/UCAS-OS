@@ -67,6 +67,8 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 
 	req->next = NULL;
 	cli();
+
+	// 添加请求时该设备还没有队列
 	if (req->bh)
 		req->bh->b_dirt = 0;
 	if (!(tmp = dev->current_request)) {
@@ -75,6 +77,8 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 		(dev->request_fn)();
 		return;
 	}
+
+	// 如果有队列的，找一个合适的位置插入
 	for ( ; tmp->next ; tmp=tmp->next)
 		if ((IN_ORDER(tmp,req) ||
 		    !IN_ORDER(tmp,tmp->next)) &&
@@ -150,6 +154,8 @@ repeat:
 	req->waiting = NULL;
 	req->bh = bh;
 	req->next = NULL;
+
+	// 添加到当前设备的队列，一个设备一个队列
 	add_request(major+blk_dev,req);
 }
 

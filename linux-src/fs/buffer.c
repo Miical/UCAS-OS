@@ -299,6 +299,7 @@ struct buffer_head * bread(int dev,int block)
 
 	// 读取数据，使得update_to_date
 	ll_rw_block(READ,bh);
+	// 等待数据返回
 	wait_on_buffer(bh);
 	if (bh->b_uptodate)
 		return bh;

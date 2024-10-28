@@ -176,6 +176,7 @@ void main(void)		/* This really IS void, no error here. */
  * can run). For task0 'pause()' just means we go check if some other
  * task can run, and if not we return here.
  */
+	// idle
 	// 进程0在这里不停的调度, pause->schedule->switch_to
 	for(;;) pause();
 }
