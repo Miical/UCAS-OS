@@ -164,10 +164,19 @@ void sleep_on(struct task_struct **p)
 		return;
 	if (current == &(init_task.task))
 		panic("task[0] trying to sleep");
+	// p 是指向 b_wait 的指针
+	// *p 是b_wait的内容
+
+	// b_wait 原来指向的进程赋值给 tmp
 	tmp = *p;
+	// 让b_wait等于当前进程
 	*p = current;
+	// 这样子就形成了一个等待的链条
+
 	current->state = TASK_UNINTERRUPTIBLE;
 	schedule();
+
+	// 回来的时候把链条上每个的state都置成0
 	if (tmp)
 		tmp->state=0;
 }
@@ -193,6 +202,7 @@ repeat:	current->state = TASK_INTERRUPTIBLE;
 		tmp->state=0;
 }
 
+// 与sleep_on 对应
 void wake_up(struct task_struct **p)
 {
 	if (p && *p) {

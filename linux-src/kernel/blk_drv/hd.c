@@ -253,11 +253,14 @@ static void bad_rw_intr(void)
 // 读中断
 static void read_intr(void)
 {
+	// 读有问题
 	if (win_result()) {
 		bad_rw_intr();
 		do_hd_request();
 		return;
 	}
+
+	// 一个中断返回是一个扇区，一个块两个扇区
 	port_read(HD_DATA,CURRENT->buffer,256);
 	CURRENT->errors = 0;
 	CURRENT->buffer += 512;

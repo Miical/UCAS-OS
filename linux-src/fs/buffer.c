@@ -35,8 +35,11 @@ int NR_BUFFERS = 0;
 
 static inline void wait_on_buffer(struct buffer_head * bh)
 {
+	// 关中断关的是当前进程的中断, 标志位在eflags里
+	// 不延续到切换到的进程
 	cli();
 	while (bh->b_lock)
+		// bh->b_wait是个全局的
 		sleep_on(&bh->b_wait);
 	sti();
 }
