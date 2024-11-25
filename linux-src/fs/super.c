@@ -138,6 +138,7 @@ static struct super_block * read_super(int dev)
 		s->s_imap[i] = NULL;
 	for (i=0;i<Z_MAP_SLOTS;i++)
 		s->s_zmap[i] = NULL;
+	// 位图加载至缓冲区
 	block=2;
 	for (i=0 ; i < s->s_imap_blocks ; i++)
 		if (s->s_imap[i]=bread(dev,block))
@@ -158,6 +159,7 @@ static struct super_block * read_super(int dev)
 		free_super(s);
 		return NULL;
 	}
+	// 位图0号不能使用，防止和返回值冲突
 	s->s_imap[0]->b_data[0] |= 1;
 	s->s_zmap[0]->b_data[0] |= 1;
 	free_super(s);
@@ -263,7 +265,8 @@ void mount_root(void)
 	if (!(mi=iget(ROOT_DEV,ROOT_INO)))
 		panic("Unable to read root i-node");
 	mi->i_count += 3 ;	/* NOTE! it is logically used 4 times, not 1 */
-	p->s_isup = p->s_imount = mi;
+	p->s_isup = p->s_imount = mi; // 安装根文件系统
+	// 挂在当前进程上，以后的进程都可以继承当前进程的东西，然后得到获取根文件系统的能力
 	current->pwd = mi;
 	current->root = mi;
 	free=0;

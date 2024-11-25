@@ -156,8 +156,9 @@ int sys_setup(void * BIOS)
 	}
 	if (NR_HD)
 		printk("Partition table%s ok.\n\r",(NR_HD>1)?"s":"");
+	// 初始化虚拟盘
 	rd_load();
-	mount_root();
+	();
 	return (0);
 }
 

@@ -2,7 +2,7 @@
 __asm__ ("movl %%esp,%%eax\n\t" \
 	// 之前的所用的0特权栈，就是进程0的用户栈
 	// 0x17要和ldtr(0)相关联，进程0
-	"pushl $0x17\n\t" \ // 0x17: 用户数据段选择子 ss
+	"pushl $0x17\n\t" \ // 0x17: 用户数据段选择子 ss 17说明变成了3特权级的段。iret以后这个栈就变成了3特权级的栈
 	"pushl %%eax\n\t" \ // 用户栈指针            esp
 	"pushfl\n\t" \      // eflags              eflags
 	"pushl $0x0f\n\t" \ // 0x0f: 用户代码段选择子 cs
