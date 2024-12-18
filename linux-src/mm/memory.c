@@ -165,7 +165,9 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 	// 让同学回去算->进程0的基址位置和内核的基址位置相同
 
 	// 页目录表项的基址
+	// 父进程页目录表项指针
 	from_dir = (unsigned long *) ((from>>20) & 0xffc); /* _pg_dir = 0 */
+	// 子进程页目录表项指针
 	to_dir = (unsigned long *) ((to>>20) & 0xffc);
 	size = ((unsigned) (size+0x3fffff)) >> 22;
 
@@ -179,6 +181,7 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 		if (!(to_page_table = (unsigned long *) get_free_page()))
 			return -1;	/* Out of memory, see freeing */
 		*to_dir = ((unsigned long) to_page_table) | 7;
+		// from==0时是第一次调用，无需复制全部，会造成浪费。
 		nr = (from==0)?0xA0:1024;
 
 		// 拷贝页表的逐项
@@ -419,7 +422,7 @@ void mem_init(long start_mem, long end_mem)
 	int i;
 
 	HIGH_MEMORY = end_mem;
-	// mem_map 引用计数
+	// mem_map 引用计数，被那些线程引用了
 	// 最多 64 进程，USED 为 100
 	for (i=0 ; i<PAGING_PAGES ; i++)
 		mem_map[i] = USED;

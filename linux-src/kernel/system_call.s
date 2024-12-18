@@ -78,6 +78,13 @@ reschedule:
 	jmp _schedule
 .align 2
 
+/*
+ * 判断系统调用号是否合法
+ * 压入六个寄存器 ds, es, fs, edx, ecx, ebx
+ * 设置内核数据段
+ * 调用对应的系统调用函数
+ */
+
 # 系统调用的入口, int 0x80 会调用这个函数
 _system_call:
 	# nr_system_calls = 72，总的系统调用数

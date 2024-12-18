@@ -199,6 +199,20 @@ int sys_umount(char * dev_name)
 	return 0;
 }
 
+/* 安装文件系统（非根文件系统）
+ * 参数：设备名，路径名
+ * 调用 [namei(设备名)] 获取设备名对应的 inode
+ *     - 调用 [dir_namei] 获取路径名对应的 inode
+ *         - 调用 [get_dir] 获取路径名中dir对应的 inode
+ *             - 如果一上来就是 '/'，那就从根目录开始
+ *             - 如果不是，那就从当前目录开始
+ *             - 不断循环，找到最后一个 dir inode 并返回。中间利用 find_entry 找到对应的 dir_entry
+ *         - 找到最后一个 '/' 然后把 '/' 后面的字符串赋值给 basename
+ *     - 从dir inode中找到对应的 dir_entry 并返回
+ * 调用 [namei(路径名)] 获取路径名对应的 inode
+ * 把设备对应的inode挂载到路径对应的inode上
+ */
+
 int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 {
 	struct m_inode * dev_i, * dir_i;
@@ -240,6 +254,31 @@ int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 	dir_i->i_dirt=1;		/* NOTE! we don't iput(dir_i) */
 	return 0;			/* we do that in umount */
 }
+
+/* mount_root
+ * 初始化 file_table
+ * 初始化 super_block
+ * 读超级块 [read_super(根设备)]
+ *     - 调用 [get_super(根设备)] 去找 super_block 数组里面有没有对应的超级块A
+ *         - 从头开始遍历，如果 .s_dev 相等
+ *         - wait_on_super 之后返回，没找到返回空
+ *     - 如果get_super就找到了，那就返回
+ *     - 否则找一个空闲的超级块，找不到返回空
+ *     - 初始化超级块，然后通过bread读取超级块磁盘中的数据
+ *     - 释放bread产生的缓冲区
+ *     - 判断魔数
+ *     - 通过bread读取imap和zmap位图，并把缓冲区放到超级块的s_imap和s_zmap上
+ *     - 位图0号不能使用，防止和返回0冲突
+ *     - 释放超级块锁
+ * 读根设备的 i 节点 [iget(根设备，根 i 节点)]
+ *     - 遍历整个inode_table，如果能找到设备号块号相符的i节点, 就wait_on_inode，然后返回
+ *     - 如果找不到，就通过 [get_empty_inode] 找到一个空闲的 inode
+ *     - 设置空闲的 inode 的设备号和块号，然后调用 [read_inode]
+ *         - 根据块号计算出设备上实际块号的位置，然后通过bread读取
+ *     - 返回 inode
+ * p->s_isup = p->s_imount = mi; // 安装根文件系统
+ * 把根i节点挂到当前进程的pwd和root上，以后的进程都可以继承当前进程的东西，然后得到获取根文件系统的能力
+ */
 
 void mount_root(void)
 {

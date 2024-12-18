@@ -64,7 +64,7 @@ int sys_access(const char * filename,int mode)
 	 * XXX we are doing this test last because we really should be
 	 * swapping the effective with the real user id (temporarily),
 	 * and then calling suser() routine.  If we do call the
-	 * suser() routine, it needs to be called last. 
+	 * suser() routine, it needs to be called last.
 	 */
 	if ((!current->uid) &&
 	    (!(mode & 1) || (i_mode & 0111)))
@@ -135,6 +135,14 @@ int sys_chown(const char * filename,int uid,int gid)
 	return 0;
 }
 
+/* sys_open
+ * 找到 filp 的空闲位置 fd
+ * 找到 file_table 的空闲位置 f
+ * filep的引用计数+1，并且指向file_table中找到的那一项
+ * 调用 [open_namei] 打开文件，负责找 inode
+ *     - ...
+ * 设置f的属性，让f指向找到的inode
+ */
 int sys_open(const char * filename,int flag,int mode)
 {
 	struct m_inode * inode;
@@ -189,8 +197,10 @@ int sys_creat(const char * pathname, int mode)
 	return sys_open(pathname, O_CREAT | O_TRUNC, mode);
 }
 
+/* 把 sysopen 建立的关联给断掉
+ */
 int sys_close(unsigned int fd)
-{	
+{
 	struct file * filp;
 
 	if (fd >= NR_OPEN)

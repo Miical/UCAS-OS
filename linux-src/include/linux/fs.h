@@ -65,6 +65,14 @@ __asm__("incl %0\n\tandl $4095,%0"::"m" (head))
 
 typedef char buffer_block[BLOCK_SIZE];
 
+/* 文件系统
+ * 最多就8个超级块 super_block[8]
+ * 引导块是物理设备的特征（通过引导块能拿到分区），超级块是逻辑设备的特征
+ *
+ */
+
+
+
 // 缓冲区是内核的数据结构，用于加速对块设备的访问
 struct buffer_head {
 	// 指向对应数据块
@@ -106,7 +114,7 @@ struct m_inode {
 	unsigned long i_mtime;
 	unsigned char i_gid;
 	unsigned char i_nlinks;
-	unsigned short i_zone[9];
+	unsigned short i_zone[9]; // 7个直接块，1个一级间接块，1个二级间接块
 /* these are in memory also */
 	struct task_struct * i_wait;
 	unsigned long i_atime;
@@ -140,11 +148,11 @@ struct super_block {
 	unsigned long s_max_size;
 	unsigned short s_magic;
 /* These are only in memory */
-	struct buffer_head * s_imap[8];
-	struct buffer_head * s_zmap[8];
+	struct buffer_head * s_imap[8]; // inode 位图
+	struct buffer_head * s_zmap[8]; // 逻辑块位图 最多支持的逻辑盘大小就是 8 * 1024 * 8 * 1024 = 64M
 	unsigned short s_dev;
-	struct m_inode * s_isup;
-	struct m_inode * s_imount;
+	struct m_inode * s_isup;   // 哪个是根i节点
+	struct m_inode * s_imount; // 根i节点mount到哪去了
 	unsigned long s_time;
 	struct task_struct * s_wait;
 	unsigned char s_lock;

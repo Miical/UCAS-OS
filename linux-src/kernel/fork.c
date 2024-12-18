@@ -44,7 +44,7 @@ int copy_mem(int nr,struct task_struct * p)
 	code_limit=get_limit(0x0f); // 0x0f用户代码段 获得当前运行进程的限长
 	data_limit=get_limit(0x17); // 0x17用户数据段
 	old_code_base = get_base(current->ldt[1]); // 代码段基址
-	old_data_base = get_base(current->ldt[2]); // 代码段限长
+	old_data_base = get_base(current->ldt[2]); // 数据段基址
 	if (old_data_base != old_code_base)
 		panic("We don't support separate I&D");
 	if (data_limit < code_limit)

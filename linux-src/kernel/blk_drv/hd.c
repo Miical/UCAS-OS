@@ -333,6 +333,8 @@ void do_hd_request(void)
 			WIN_RESTORE,&recal_intr);
 		return;
 	}
+
+	// ---
 	if (CURRENT->cmd == WRITE) {
 		hd_out(dev,nsect,sec,head,cyl,WIN_WRITE,&write_intr);
 		for(i=0 ; i<3000 && !(r=inb_p(HD_STATUS)&DRQ_STAT) ; i++)

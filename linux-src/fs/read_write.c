@@ -52,6 +52,21 @@ int sys_lseek(unsigned int fd,off_t offset, int origin)
 	return file->f_pos;
 }
 
+/* sys_read
+ * 是否是管道
+ * 是否是字符设备
+ * 是否是块设备
+ * 是否是目录文件
+ * 普通文件，调用 [file_read]
+ *     - 通过bread读取数据块，里面要控制读哪些块，从文件偏移找到起始块，读到缓冲区里，再放到用户空间
+ *
+ *
+ * sys_write
+ * write之前还要bread，因为要经过缓冲区，写完之后置为 b_dirt，完成写了
+ *
+ * sys_sync
+ * 整个系统里的缓冲区全部刷一遍，写回dirt
+ */
 int sys_read(unsigned int fd,char * buf,int count)
 {
 	struct file * file;
@@ -84,7 +99,7 @@ int sys_write(unsigned int fd,char * buf,int count)
 {
 	struct file * file;
 	struct m_inode * inode;
-	
+
 	if (fd>=NR_OPEN || count <0 || !(file=current->filp[fd]))
 		return -EINVAL;
 	if (!count)

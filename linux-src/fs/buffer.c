@@ -239,7 +239,7 @@ repeat:
 	} while ((tmp = tmp->b_next_free) != free_list);
 	// 以上找到了一个最好的 buffer_head，但是这个 buffer_head 可能是脏的，或者被锁住的
 
-	// 如果全部的 buffer_head 都被占用了，那就等待
+	// 如果全部的 buffer_head 都被占用了（引用计数都大于0），那就等待
 	if (!bh) {
 		sleep_on(&buffer_wait);
 		goto repeat;
